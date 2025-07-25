@@ -1,0 +1,15 @@
+﻿{
+	"vertex": "Assets/Shaders/Text.vertex.glsl",
+	"fragment": "Assets/Shaders/Text.fragment.glsl",
+	"renderOrder": 1,
+	"depthCompareOperation": "less",
+	"depthWrite": false,
+	"depthTest": true,
+	"blendEnable": true,
+	"sourceColorBlend": "sourceAlpha",
+	"destinationColorBlend": "oneMinusSourceAlpha",
+	"colorBlendOperation": "add",
+	"sourceAlphaBlend": "one",
+	"destinationAlphaBlend": "zero",
+	"alphaBlendOperation": "add"
+}

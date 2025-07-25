@@ -11,25 +11,6 @@ namespace Serialization.Tests
     public class JSONTests : UnmanagedTests
     {
         [Test]
-        public void ReadWhitespace()
-        {
-            using ByteWriter writer = new();
-            writer.WriteUTF8(' ');
-            writer.WriteUTF8('\r');
-            writer.WriteUTF8('\n');
-            writer.WriteUTF8('\t');
-            writer.WriteUTF8((char)65279); //BOM
-
-            using ByteReader reader = new(writer);
-            Span<char> text = stackalloc char[64];
-            int length = reader.ReadUTF8(text);
-            for (int i = 0; i < length; i++)
-            {
-                Assert.That(char.IsWhiteSpace(text[i]), Is.True);
-            }
-        }
-
-        [Test]
         public void ParseTokens()
         {
             JsonObject json = new()
@@ -374,50 +355,18 @@ namespace Serialization.Tests
             Assert.That(readPlayer.Items.Length, Is.EqualTo(player.Items.Length));
             Assert.That(readPlayer.Color, Is.EqualTo(player.Color));
 
-            string expectedSource =
-@"{
-    name: 'playerName',
-    hp: 100,
-    items: [
-        {
-            name: 'abacus',
-            value: '212-4',
-            quantity: 32,
-            isRare: false
-        },
-        {
-            name: 'itemId',
-            value: 'forgot what this is',
-            quantity: 1,
-            isRare: true
-        }
-    ],
-    htmlColor: 'red'
-}";
+            string expectedSource = GetResourceText("Sample1.json5").ToString();
             Assert.That(jsonSource, Is.EqualTo(expectedSource));
         }
 
         [Test]
         public void TryReadXMLAsJSON()
         {
-            ByteReader reader = ByteReader.CreateFromUTF8("<Project Sdk=\"Microshaft.Sdk.blabla\"><Some>5</Some></Project>");
-            JSONReader jsonReader = new(reader);
-            while (true)
+            string source = "<Project Sdk=\"Microshaft.Sdk.blabla\"><Some>5</Some></Project>";
+            if (JSONObject.TryParse(source, out JSONObject jsonObject))
             {
-                try
-                {
-                    if (jsonReader.TryReadToken(out Token token))
-                    {
-                        Console.WriteLine(token.GetText(jsonReader));
-                    }
-                }
-                catch (Exception)
-                {
-                    break;
-                }
+                Assert.Fail("Expected failure, but parsed successfully");
             }
-
-            reader.Dispose();
         }
 
         [Test]
@@ -439,6 +388,24 @@ namespace Serialization.Tests
             {
                 Assert.That(items[i].Number, Is.EqualTo(i));
             }
+        }
+
+        [Test]
+        public void ReadMaterialJSON()
+        {
+            string source = GetResourceText("Sample2.json").ToString();
+            using JSONObject jsonObject = JSONObject.Parse(source);
+            Assert.That(jsonObject.Contains("vertex"), Is.True);
+            Assert.That(jsonObject.Contains("fragment"), Is.True);
+
+            using ByteReader byteReader = ByteReader.CreateFromUTF8(source);
+            using JSONObject jsonObject2 = byteReader.ReadObject<JSONObject>();
+            bool hasVertexProperty = jsonObject2.TryGetText("vertex", out ReadOnlySpan<char> vertexText);
+            bool hasFragmentProperty = jsonObject2.TryGetText("fragment", out ReadOnlySpan<char> fragmentText);
+            Assert.That(hasVertexProperty, Is.True);
+            Assert.That(hasFragmentProperty, Is.True);
+            Assert.That(vertexText.ToString(), Is.EqualTo("Assets/Shaders/Text.vertex.glsl"));
+            Assert.That(fragmentText.ToString(), Is.EqualTo("Assets/Shaders/Text.fragment.glsl"));
         }
 
         [Test]

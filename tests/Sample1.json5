@@ -1,0 +1,19 @@
+﻿{
+    name: 'playerName',
+    hp: 100,
+    items: [
+        {
+            name: 'abacus',
+            value: '212-4',
+            quantity: 32,
+            isRare: false
+        },
+        {
+            name: 'itemId',
+            value: 'forgot what this is',
+            quantity: 1,
+            isRare: true
+        }
+    ],
+    htmlColor: 'red'
+}

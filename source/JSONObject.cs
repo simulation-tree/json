@@ -680,25 +680,32 @@ namespace JSON
             return TryGetArray(name.AsSpan(), out array);
         }
 
-        readonly void ISerializable.Write(ByteWriter writer)
+        /// <summary>
+        /// Loads this JSON object from the given <paramref name="sourceText"/>.
+        /// </summary>
+        public readonly void Overwrite(ReadOnlySpan<char> sourceText)
         {
-            Text list = new(0);
-            ToString(list);
-            writer.WriteUTF8(list.AsSpan());
-            list.Dispose();
+            ThrowIfDisposed();
+
+            //todo: this is cheating, because its allocating a new buffer just to reuse the same parse function, even though the source text is already here
+            using ByteReader byteReader = ByteReader.CreateFromUTF8(sourceText);
+            Overwrite(byteReader);
         }
 
-        void ISerializable.Read(ByteReader reader)
+        /// <summary>
+        /// Loads this JSON object from the given <paramref name="byteReader"/>.
+        /// </summary>
+        public readonly void Overwrite(ByteReader byteReader)
         {
-            jsonObject = MemoryAddress.AllocatePointer<Implementation>();
-            jsonObject->properties = new(4);
-            JSONReader jsonReader = new(reader);
+            ThrowIfDisposed();
+
+            JSONReader jsonReader = new(byteReader);
             if (jsonReader.TryPeekToken(out Token nextToken, out int readBytes))
             {
                 if (nextToken.type == Token.Type.StartObject)
                 {
                     //start of object
-                    reader.Advance(readBytes);
+                    byteReader.Advance(readBytes);
                 }
             }
 
@@ -752,12 +759,12 @@ namespace JSON
                         }
                         else if (nextToken.type == Token.Type.StartObject)
                         {
-                            JSONObject newObject = reader.ReadObject<JSONObject>();
+                            JSONObject newObject = byteReader.ReadObject<JSONObject>();
                             Add(name, newObject);
                         }
                         else if (nextToken.type == Token.Type.StartArray)
                         {
-                            JSONArray newArray = reader.ReadObject<JSONArray>();
+                            JSONArray newArray = byteReader.ReadObject<JSONArray>();
                             Add(name, newArray);
                         }
                         else if (nextToken.type == Token.Type.EndObject)
@@ -785,10 +792,25 @@ namespace JSON
             }
         }
 
+        readonly void ISerializable.Write(ByteWriter writer)
+        {
+            Text list = new(0);
+            ToString(list);
+            writer.WriteUTF8(list.AsSpan());
+            list.Dispose();
+        }
+
+        void ISerializable.Read(ByteReader reader)
+        {
+            jsonObject = MemoryAddress.AllocatePointer<Implementation>();
+            jsonObject->properties = new(4);
+            Overwrite(reader);
+        }
+
         /// <inheritdoc/>
         public readonly override bool Equals(object? obj)
         {
-            return obj is JSONObject @object && Equals(@object);
+            return obj is JSONObject jsonObject && Equals(jsonObject);
         }
 
         /// <inheritdoc/>
@@ -827,7 +849,7 @@ namespace JSON
         public readonly override int GetHashCode()
         {
             ThrowIfDisposed();
-            
+
             int hash = 17;
             Span<JSONProperty> properties = jsonObject->properties.AsSpan();
             for (int i = 0; i < properties.Length; i++)
@@ -849,9 +871,36 @@ namespace JSON
             return new JSONObject(jsonObject);
         }
 
-        private struct Implementation
+        /// <summary>
+        /// Parses the given <paramref name="sourceText"/> as a new <see cref="JSONObject"/>.
+        /// </summary>
+        public static JSONObject Parse(ReadOnlySpan<char> sourceText)
         {
-            public List<JSONProperty> properties;
+            JSONObject jsonObject = Create();
+            jsonObject.Overwrite(sourceText);
+            return jsonObject;
+        }
+
+        /// <summary>
+        /// Tries to parse the given <paramref name="sourceText"/> as a new <see cref="JSONObject"/>.
+        /// </summary>
+        /// <returns><see langword="true"/> if successful.</returns>
+        public static bool TryParse(ReadOnlySpan<char> sourceText, out JSONObject jsonObject)
+        {
+            Implementation* jsonObjectPointer = MemoryAddress.AllocatePointer<Implementation>();
+            jsonObjectPointer->properties = new(4);
+            jsonObject = new(jsonObjectPointer);
+            try
+            {
+                jsonObject.Overwrite(sourceText);
+                return true;
+            }
+            catch
+            {
+                jsonObject.Dispose();
+                jsonObject = default;
+                return false;
+            }
         }
 
         /// <inheritdoc/>
@@ -864,6 +913,11 @@ namespace JSON
         public static bool operator !=(JSONObject left, JSONObject right)
         {
             return !(left == right);
+        }
+
+        private struct Implementation
+        {
+            public List<JSONProperty> properties;
         }
     }
 }

@@ -75,7 +75,7 @@ namespace JSON
                     readBytes = position - reader.Position + 1;
                     return true;
                 }
-                else if (c == Token.Aggregator || c == Token.Separator || char.IsWhiteSpace(c))
+                else if (c == Token.Aggregator || c == Token.Separator || SharedFunctions.IsWhiteSpace(c))
                 {
                     position += bytesRead;
                 }
@@ -120,7 +120,7 @@ namespace JSON
                     while (position < length)
                     {
                         bytesRead = reader.PeekUTF8(position, out c, out _);
-                        if (c == Token.StartObject || c == Token.EndObject || c == Token.StartArray || c == Token.EndArray || c == Token.Aggregator || c == Token.Separator || char.IsWhiteSpace(c))
+                        if (c == Token.StartObject || c == Token.EndObject || c == Token.StartArray || c == Token.EndArray || c == Token.Aggregator || c == Token.Separator || SharedFunctions.IsWhiteSpace(c))
                         {
                             token = new Token(start, position - start, Token.Type.Value);
                             readBytes = position - reader.Position;
