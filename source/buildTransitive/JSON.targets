@@ -3,7 +3,7 @@
 
     <ItemGroup>
         <Reference Include="JSON">
-            <HintPath>$(MSBuildThisFileDirectory)..\lib\net9.0\$(Configuration)\JSON.dll</HintPath>
+            <HintPath>$(MSBuildThisFileDirectory)..\lib\$(TargetFramework)\$(Configuration)\JSON.dll</HintPath>
         </Reference>
     </ItemGroup>
 
