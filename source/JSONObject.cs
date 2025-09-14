@@ -872,27 +872,27 @@ namespace JSON
         }
 
         /// <summary>
-        /// Parses the given <paramref name="sourceText"/> as a new <see cref="JSONObject"/>.
+        /// Parses the given <paramref name="jsonText"/> as a new <see cref="JSONObject"/>.
         /// </summary>
-        public static JSONObject Parse(ReadOnlySpan<char> sourceText)
+        public static JSONObject Parse(ReadOnlySpan<char> jsonText)
         {
             JSONObject jsonObject = Create();
-            jsonObject.Overwrite(sourceText);
+            jsonObject.Overwrite(jsonText);
             return jsonObject;
         }
 
         /// <summary>
-        /// Tries to parse the given <paramref name="sourceText"/> as a new <see cref="JSONObject"/>.
+        /// Tries to parse the given <paramref name="jsonText"/> as a new <see cref="JSONObject"/>.
         /// </summary>
         /// <returns><see langword="true"/> if successful.</returns>
-        public static bool TryParse(ReadOnlySpan<char> sourceText, out JSONObject jsonObject)
+        public static bool TryParse(ReadOnlySpan<char> jsonText, out JSONObject jsonObject)
         {
             Implementation* jsonObjectPointer = MemoryAddress.AllocatePointer<Implementation>();
             jsonObjectPointer->properties = new(4);
             jsonObject = new(jsonObjectPointer);
             try
             {
-                jsonObject.Overwrite(sourceText);
+                jsonObject.Overwrite(jsonText);
                 return true;
             }
             catch
@@ -901,6 +901,39 @@ namespace JSON
                 jsonObject = default;
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Parses the given <paramref name="jsonBytes"/> as a new <see cref="JSONObject"/>.
+        /// </summary>
+        public static JSONObject Parse(ReadOnlySpan<byte> jsonBytes)
+        {
+            using ByteReader byteReader = new(jsonBytes);
+            return byteReader.ReadObject<JSONObject>();
+        }
+
+        /// <summary>
+        /// Tries to parse the given <paramref name="jsonBytes"/> as a new <see cref="JSONObject"/>.
+        /// </summary>
+        /// <returns><see langword="true"/> if successful.</returns>
+        public static bool TryParse(ReadOnlySpan<byte> jsonBytes, out JSONObject jsonObject)
+        {
+            using ByteReader byteReader = new(jsonBytes);
+            jsonObject = default;
+            try
+            {
+                jsonObject = byteReader.ReadObject<JSONObject>();
+            }
+            catch
+            {
+                if (jsonObject != default)
+                {
+                    jsonObject.Dispose();
+                    jsonObject = default;
+                }
+            }
+
+            return jsonObject != default;
         }
 
         /// <inheritdoc/>
